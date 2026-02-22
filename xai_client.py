@@ -18,8 +18,7 @@ SYSTEM_PROMPT = (
 PREFERRED_MODELS = [
     "grok-2-vision-1212",
     "grok-2-1212",
-    "grok-2-latest",
-    "grok-beta",
+    "grok-2-mini-1212",
 ]
 
 VISION_MODELS = {
@@ -57,7 +56,7 @@ class XAIClient:
                 return chosen
         except Exception as exc:
             logger.warning("Could not list xAI models: %s", exc)
-        return "grok-beta"
+        return "grok-2-1212"
 
     async def chat(
         self,
