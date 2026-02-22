@@ -1,16 +1,14 @@
 """
 OpenRouter AI client for the Telegram bot.
-OpenRouter provides access to hundreds of AI models via a single API.
+Uses plain httpx — no openai SDK dependency.
 Free models: https://openrouter.ai/models?q=free
 """
 
 import asyncio
 import base64
 import logging
-import mimetypes
-from pathlib import Path
 
-from openai import AsyncOpenAI
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -32,21 +30,43 @@ SYSTEM_PROMPT = (
 
 
 class OpenRouterClient:
-    """Async client for OpenRouter AI API."""
+    """Async client for OpenRouter AI API using plain httpx."""
 
-    BASE_URL = "https://openrouter.ai/api/v1"
+    BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
     def __init__(self, api_key: str, model: str = "auto") -> None:
-        self._client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=self.BASE_URL,
-        )
-        if model == "auto":
-            self._model = PREFERRED_FREE_MODELS[0]
-            logger.info("OpenRouterClient using model: %s", self._model)
-        else:
-            self._model = model
-            logger.info("OpenRouterClient using model: %s", self._model)
+        self._api_key = api_key
+        self._model = PREFERRED_FREE_MODELS[0] if model == "auto" else model
+        logger.info("OpenRouterClient using model: %s", self._model)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    async def _call(self, messages: list[dict]) -> str:
+        """Make an async POST request to OpenRouter and return the reply text."""
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://github.com/goku600/companion",
+            "X-Title": "AI Companion Bot",
+        }
+        payload = {
+            "model": self._model,
+            "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + messages,
+        }
+
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(self.BASE_URL, headers=headers, json=payload)
+
+        if response.status_code != 200:
+            logger.error("OpenRouter error %s: %s", response.status_code, response.text[:500])
+            raise RuntimeError(
+                f"OpenRouter API returned HTTP {response.status_code}: {response.text[:300]}"
+            )
+
+        data = response.json()
+        return data["choices"][0]["message"]["content"].strip()
 
     # ------------------------------------------------------------------
     # Public API
@@ -60,13 +80,7 @@ class OpenRouterClient:
         """Send a text message and return (reply, updated_history)."""
         history = list(history)
         history.append({"role": "user", "content": user_message})
-
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
-        )
-
-        reply = response.choices[0].message.content.strip()
+        reply = await self._call(history)
         history.append({"role": "assistant", "content": reply})
         return reply, history
 
@@ -81,7 +95,6 @@ class OpenRouterClient:
         """Send a message with a file attachment."""
         history = list(history)
 
-        # Check if it's an image
         if mime_type and mime_type.startswith("image/"):
             b64 = base64.b64encode(file_bytes).decode()
             content = [
@@ -93,13 +106,12 @@ class OpenRouterClient:
             ]
             history.append({"role": "user", "content": content})
         else:
-            # Try to decode as text
             try:
                 text_content = file_bytes.decode("utf-8", errors="replace")
                 combined = (
                     f"{user_message}\n\n"
                     f"--- File: {file_name} ---\n"
-                    f"{text_content[:12000]}"  # limit to 12k chars
+                    f"{text_content[:12000]}"
                 )
                 if len(text_content) > 12000:
                     combined += f"\n\n[... file truncated, {len(text_content)} chars total ...]"
@@ -110,11 +122,6 @@ class OpenRouterClient:
                 )
             history.append({"role": "user", "content": combined})
 
-        response = await self._client.chat.completions.create(
-            model=self._model,
-            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
-        )
-
-        reply = response.choices[0].message.content.strip()
+        reply = await self._call(history)
         history.append({"role": "assistant", "content": reply})
         return reply, history
