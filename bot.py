@@ -244,7 +244,7 @@ async def handle_file_message(
 # Main
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+async def main() -> None:
     """Entry point."""
     rovo_client = RovoDevClient(
         email=ATLASSIAN_EMAIL,
@@ -281,4 +281,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
