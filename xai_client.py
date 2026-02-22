@@ -57,7 +57,7 @@ class XAIClient:
                 return chosen
         except Exception as exc:
             logger.warning("Could not list xAI models: %s", exc)
-        return "grok-2"
+        return "grok-beta"
 
     async def chat(
         self,
