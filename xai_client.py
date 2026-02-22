@@ -16,10 +16,15 @@ SYSTEM_PROMPT = (
 )
 
 PREFERRED_MODELS = [
-    "grok-2",
+    "grok-2-vision-1212",
     "grok-2-latest",
+    "grok-2",
     "grok-1",
 ]
+
+VISION_MODELS = {
+    "grok-2-vision-1212",
+}
 
 
 class XAIClient:
@@ -86,8 +91,46 @@ class XAIClient:
         mime_type: str,
         history: list[dict],
     ) -> tuple[str, list[dict]]:
-        """Handle file uploads — embed text files in the prompt."""
-        # For text-based files, embed content directly
+        """Handle file uploads — images via vision API, text files embedded in prompt."""
+        import base64
+
+        # ---- Images: use vision model ----
+        if mime_type.startswith("image/"):
+            if self._model in VISION_MODELS:
+                b64 = base64.b64encode(file_bytes).decode()
+                data_uri = f"data:{mime_type};base64,{b64}"
+
+                history = list(history)
+                history.append({
+                    "role": "user",
+                    "content": [
+                        {"type": "image_url", "image_url": {"url": data_uri}},
+                        {"type": "text", "text": user_message},
+                    ],
+                })
+
+                messages = [{"role": "system", "content": SYSTEM_PROMPT}] + history
+
+                def _call():
+                    return self._client.chat.completions.create(
+                        model=self._model,
+                        messages=messages,
+                        temperature=0.7,
+                    )
+
+                response = await asyncio.get_event_loop().run_in_executor(None, _call)
+                reply = response.choices[0].message.content.strip()
+                history.append({"role": "assistant", "content": reply})
+                return reply, history
+            else:
+                combined = (
+                    f"{user_message}\n\n"
+                    f"[Image '{file_name}' uploaded but current model '{self._model}' "
+                    f"does not support vision. Switch to grok-2-vision-1212.]"
+                )
+                return await self.chat(combined, history)
+
+        # ---- Text-based files: embed content in prompt ----
         if mime_type.startswith("text/") or any(
             file_name.endswith(ext)
             for ext in (
@@ -109,9 +152,8 @@ class XAIClient:
         else:
             combined = (
                 f"{user_message}\n\n"
-                f"[Note: File '{file_name}' ({mime_type}) was uploaded but "
-                f"xAI Grok currently only supports text content. "
-                f"Please share the content as text instead.]"
+                f"[Note: File '{file_name}' ({mime_type}) is not supported. "
+                f"Please share as text or image.]"
             )
 
         return await self.chat(combined, history)
