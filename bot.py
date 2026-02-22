@@ -1,5 +1,5 @@
 """
-Telegram Bot + Atlassian Rovo Dev AI Agent Integration
+Telegram Bot + Google Gemini AI Integration
 Hosted on Render.com
 """
 
@@ -9,7 +9,6 @@ import asyncio
 import tempfile
 from pathlib import Path
 
-import httpx
 from telegram import Update, Message
 from telegram.ext import (
     Application,
@@ -18,7 +17,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from rovo_client import RovoDevClient
+from gemini_client import GeminiClient
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -33,11 +32,8 @@ logger = logging.getLogger(__name__)
 # Environment variables (set these in Render dashboard)
 # ---------------------------------------------------------------------------
 TELEGRAM_BOT_TOKEN: str = os.environ["TELEGRAM_BOT_TOKEN"]
-ATLASSIAN_EMAIL: str = os.environ["ATLASSIAN_EMAIL"]
-ATLASSIAN_API_KEY: str = os.environ["ATLASSIAN_API_KEY"]
-ATLASSIAN_SITE_URL: str = os.environ.get(
-    "ATLASSIAN_SITE_URL", "https://api.atlassian.com"
-)
+GEMINI_API_KEY: str = os.environ["GEMINI_API_KEY"]
+GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")
 
 # Optional: comma-separated list of allowed Telegram user IDs (leave blank to allow all)
 ALLOWED_USER_IDS: set[int] = set()
@@ -87,7 +83,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     user = update.effective_user
     await update.message.reply_html(
         f"👋 Hello, <b>{user.first_name}</b>!\n\n"
-        "I'm connected to the <b>Atlassian Rovo Dev AI agent</b>. You can:\n\n"
+        "I'm powered by <b>Google Gemini AI</b>. You can:\n\n"
         "• 💬 <b>Ask any question</b> — just type it\n"
         "• 📎 <b>Upload a file</b> (text, code, PDF, CSV, image…) and I'll analyse it for you\n"
         "• 🔄 /reset — start a fresh conversation\n"
@@ -103,17 +99,17 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     await update.message.reply_html(
-        "<b>Rovo Dev Telegram Bot — Help</b>\n\n"
+        "<b>Gemini AI Telegram Bot — Help</b>\n\n"
         "<b>Commands:</b>\n"
         "/start — Welcome message\n"
         "/reset — Clear conversation history\n"
         "/help  — Show this help\n\n"
         "<b>How to use:</b>\n"
-        "• Type any question and I'll answer using Atlassian Rovo Dev AI.\n"
+        "• Type any question and I'll answer using Google Gemini AI.\n"
         "• Send any file (document, photo, audio, etc.) optionally with a caption "
         "describing what you want to know about it.\n\n"
         "<b>Supported file types for analysis:</b>\n"
-        "Text, code, CSV, JSON, PDF, Markdown, images, and more."
+        "Text, code, CSV, JSON, PDF, Markdown, images (JPG, PNG, GIF, WebP), and more."
     )
 
 
@@ -148,15 +144,15 @@ async def handle_text_message(
     # Maintain per-user conversation history
     history: list[dict] = context.user_data.setdefault("history", [])
 
-    client: RovoDevClient = context.bot_data["rovo_client"]
+    client: GeminiClient = context.bot_data["gemini_client"]
     try:
         reply, history = await client.chat(user_text, history)
         context.user_data["history"] = history
         await send_long_message(update.message, reply)
     except Exception as exc:
-        logger.exception("Error calling Rovo Dev API: %s", exc)
+        logger.exception("Error calling Gemini API: %s", exc)
         await update.message.reply_text(
-            f"❌ Error communicating with Rovo Dev:\n<code>{exc}</code>",
+            f"❌ Error communicating with Gemini:\n<code>{exc}</code>",
             parse_mode="HTML",
         )
 
@@ -220,7 +216,7 @@ async def handle_file_message(
 
     # ---- Build the prompt ----
     history: list[dict] = context.user_data.setdefault("history", [])
-    client: RovoDevClient = context.bot_data["rovo_client"]
+    client: GeminiClient = context.bot_data["gemini_client"]
 
     try:
         reply, history = await client.chat_with_file(
@@ -233,7 +229,7 @@ async def handle_file_message(
         context.user_data["history"] = history
         await send_long_message(message, reply)
     except Exception as exc:
-        logger.exception("Error sending file to Rovo Dev: %s", exc)
+        logger.exception("Error sending file to Gemini: %s", exc)
         await message.reply_text(
             f"❌ Error analysing file:\n<code>{exc}</code>",
             parse_mode="HTML",
@@ -246,10 +242,9 @@ async def handle_file_message(
 
 async def main() -> None:
     """Entry point."""
-    rovo_client = RovoDevClient(
-        email=ATLASSIAN_EMAIL,
-        api_key=ATLASSIAN_API_KEY,
-        site_url=ATLASSIAN_SITE_URL,
+    gemini_client = GeminiClient(
+        api_key=GEMINI_API_KEY,
+        model=GEMINI_MODEL,
     )
 
     app = (
@@ -257,7 +252,7 @@ async def main() -> None:
         .token(TELEGRAM_BOT_TOKEN)
         .build()
     )
-    app.bot_data["rovo_client"] = rovo_client
+    app.bot_data["gemini_client"] = gemini_client
 
     # Commands
     app.add_handler(CommandHandler("start", start_command))
