@@ -277,7 +277,14 @@ async def main() -> None:
     app.add_handler(MessageHandler(file_filter, handle_file_message))
 
     logger.info("Bot is running with polling…")
-    app.run_polling(drop_pending_updates=True)
+    async with app:
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling(drop_pending_updates=True)
+        # Run forever until interrupted
+        await asyncio.Event().wait()
+        await app.updater.stop()
+        await app.stop()
 
 
 if __name__ == "__main__":
