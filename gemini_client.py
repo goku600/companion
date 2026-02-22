@@ -48,15 +48,55 @@ DOCUMENT_MIME_TYPES = {
 }
 
 
+# Preferred models in priority order (best to fallback)
+PREFERRED_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
+    "gemini-pro",
+]
+
+
+def _pick_best_model() -> str:
+    """List available models and pick the best one from PREFERRED_MODELS."""
+    try:
+        available = {
+            m.name.replace("models/", "")
+            for m in genai.list_models()
+            if "generateContent" in m.supported_generation_methods
+        }
+        logger.info("Available Gemini models: %s", available)
+        for preferred in PREFERRED_MODELS:
+            if preferred in available:
+                logger.info("Selected Gemini model: %s", preferred)
+                return preferred
+        # Fallback: just use the first available model
+        if available:
+            chosen = next(iter(available))
+            logger.info("Falling back to model: %s", chosen)
+            return chosen
+    except Exception as e:
+        logger.warning("Could not list models: %s — defaulting to gemini-2.0-flash", e)
+    return "gemini-2.0-flash"
+
+
 class GeminiClient:
     """Async-compatible client wrapping the Google Gemini API."""
 
-    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
+    def __init__(self, api_key: str, model: str = "auto") -> None:
         genai.configure(api_key=api_key)
+
+        # Auto-detect best available model if not specified
+        if model == "auto" or not model:
+            model = _pick_best_model()
+
         self._model_name = model
         # Ensure model name has the correct prefix for the SDK
         if not model.startswith("models/"):
             model = f"models/{model}"
+        logger.info("Using Gemini model: %s", model)
         self._model = genai.GenerativeModel(
             model_name=model,
             system_instruction=(
