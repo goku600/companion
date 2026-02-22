@@ -51,7 +51,7 @@ DOCUMENT_MIME_TYPES = {
 class GeminiClient:
     """Async-compatible client wrapping the Google Gemini API."""
 
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash") -> None:
+    def __init__(self, api_key: str, model: str = "gemini-2.0-flash") -> None:
         genai.configure(api_key=api_key)
         self._model_name = model
         # Ensure model name has the correct prefix for the SDK
