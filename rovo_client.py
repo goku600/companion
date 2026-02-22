@@ -204,12 +204,8 @@ class RovoDevClient:
         base = self.site_url
 
         # ---- Atlassian Rovo Dev official REST API ----
-        # Try the site-specific gateway endpoint
-        base = self.site_url
-        if "atlassian.net" in base:
-            url = f"{base}/gateway/api/assist/chat/v1/chat"
-        else:
-            url = f"{base}/gateway/api/assist/chat/v1/chat"
+        # Use the global API gateway (not site-specific) for Rovo Dev
+        url = "https://api.atlassian.com/rovo/v1/chat"
         payload = self._build_assist_payload(messages)
 
         logger.info("POST %s  payload_keys=%s", url, list(payload.keys()))
@@ -239,19 +235,14 @@ class RovoDevClient:
 
     def _build_assist_payload(self, messages: list[dict]) -> dict:
         """
-        Payload for the Atlassian Assist gateway chat endpoint.
+        Payload for the Atlassian Rovo Dev chat endpoint.
+        Sends the full conversation history.
         """
-        # Convert history to the expected format
-        formatted_messages = []
-        for msg in messages:
-            formatted_messages.append({
-                "role": msg["role"],
-                "content": msg["content"],
-            })
-
         return {
-            "recipients": [{"type": "agent", "id": "rovo-dev"}],
-            "messages": formatted_messages,
+            "messages": [
+                {"role": msg["role"], "content": msg["content"]}
+                for msg in messages
+            ]
         }
 
     def _build_remote_agent_payload(self, messages: list[dict]) -> dict:
