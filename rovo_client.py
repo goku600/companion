@@ -61,6 +61,7 @@ class RovoDevClient:
             "Authorization": f"Basic {encoded}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            "X-Product": "jira",
         }
         self._http = httpx.AsyncClient(
             timeout=httpx.Timeout(120.0),
@@ -204,8 +205,9 @@ class RovoDevClient:
         base = self.site_url
 
         # ---- Atlassian Rovo Dev official REST API ----
-        # Use the global API gateway (not site-specific) for Rovo Dev
-        url = "https://api.atlassian.com/rovo/v1/chat"
+        # Gateway strips /gateway/api/assist prefix, so internal path is /v1/chat
+        base = self.site_url  # e.g. https://yoursite.atlassian.net
+        url = f"{base}/gateway/api/assist/v1/chat"
         payload = self._build_assist_payload(messages)
 
         logger.info("POST %s  payload_keys=%s", url, list(payload.keys()))
