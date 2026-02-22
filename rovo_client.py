@@ -50,8 +50,10 @@ class RovoDevClient:
     def __init__(self, email: str, api_key: str, site_url: str) -> None:
         self.email = email
         self.api_key = api_key
-        # Normalise — strip trailing slash
+        # Normalise — strip trailing slash and any /rovodev suffix
         self.site_url = site_url.rstrip("/")
+        if self.site_url.endswith("/rovodev"):
+            self.site_url = self.site_url[: -len("/rovodev")]
 
         credentials = f"{email}:{api_key}"
         encoded = base64.b64encode(credentials.encode()).decode()
