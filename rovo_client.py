@@ -204,8 +204,12 @@ class RovoDevClient:
         base = self.site_url
 
         # ---- Atlassian Rovo Dev official REST API ----
-        # POST https://api.atlassian.com/rovo/v1/agents/rovo-dev/chat
-        url = "https://api.atlassian.com/rovo/v1/agents/rovo-dev/chat"
+        # Try the site-specific gateway endpoint
+        base = self.site_url
+        if "atlassian.net" in base:
+            url = f"{base}/gateway/api/assist/chat/v1/chat"
+        else:
+            url = f"{base}/gateway/api/assist/chat/v1/chat"
         payload = self._build_assist_payload(messages)
 
         logger.info("POST %s  payload_keys=%s", url, list(payload.keys()))
@@ -222,6 +226,7 @@ class RovoDevClient:
                 "Ensure Rovo is enabled for your Atlassian site."
             )
         if response.status_code not in (200, 201):
+            logger.error("API error — URL: %s | Status: %s | Body: %s", url, response.status_code, response.text[:1000])
             raise RuntimeError(
                 f"Rovo Dev API returned HTTP {response.status_code}: {response.text[:500]}"
             )
