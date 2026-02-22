@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: groq-telegram-bot
+    name: grok-telegram-bot
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
@@ -10,9 +10,9 @@ services:
         value: "3.11.9"
       - key: TELEGRAM_BOT_TOKEN
         sync: false          # Set manually in Render dashboard
-      - key: GROQ_API_KEY
+      - key: XAI_API_KEY
         sync: false          # Set manually in Render dashboard
-      - key: GROQ_MODEL
+      - key: XAI_MODEL
         value: auto          # auto = pick best available model
       - key: ALLOWED_TELEGRAM_USER_IDS
         sync: false          # Optional: comma-separated user IDs
