@@ -1,6 +1,6 @@
 services:
   - type: worker
-    name: grok-telegram-bot
+    name: ai-companion-bot
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
@@ -10,9 +10,9 @@ services:
         value: "3.11.9"
       - key: TELEGRAM_BOT_TOKEN
         sync: false          # Set manually in Render dashboard
-      - key: XAI_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false          # Set manually in Render dashboard
-      - key: XAI_MODEL
-        value: auto   # auto = pick best available model from API
+      - key: OPENROUTER_MODEL
+        value: auto          # auto = use best free model
       - key: ALLOWED_TELEGRAM_USER_IDS
         sync: false          # Optional: comma-separated user IDs

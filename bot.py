@@ -17,7 +17,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from xai_client import XAIClient
+from openrouter_client import OpenRouterClient
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 # Environment variables (set these in Render dashboard)
 # ---------------------------------------------------------------------------
 TELEGRAM_BOT_TOKEN: str = os.environ["TELEGRAM_BOT_TOKEN"]
-XAI_API_KEY: str = os.environ["XAI_API_KEY"]
-XAI_MODEL: str = os.environ.get("XAI_MODEL", "auto")
+OPENROUTER_API_KEY: str = os.environ["OPENROUTER_API_KEY"]
+OPENROUTER_MODEL: str = os.environ.get("OPENROUTER_MODEL", "auto")
 
 # Optional: comma-separated list of allowed Telegram user IDs (leave blank to allow all)
 ALLOWED_USER_IDS: set[int] = set()
@@ -83,7 +83,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     user = update.effective_user
     await update.message.reply_html(
         f"👋 Hello, <b>{user.first_name}</b>!\n\n"
-        "I'm powered by <b>xAI Grok</b>. You can:\n\n"
+        "I'm powered by <b>OpenRouter AI</b> (Llama 3.3 70B). You can:\n\n"
         "• 💬 <b>Ask any question</b> — just type it\n"
         "• 📎 <b>Upload a file</b> (text, code, PDF, CSV, image…) and I'll analyse it for you\n"
         "• 🔄 /reset — start a fresh conversation\n"
@@ -99,13 +99,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     await update.message.reply_html(
-        "<b>xAI Grok Telegram Bot — Help</b>\n\n"
+        "<b>AI Companion — Help</b>\n\n"
         "<b>Commands:</b>\n"
         "/start — Welcome message\n"
         "/reset — Clear conversation history\n"
         "/help  — Show this help\n\n"
         "<b>How to use:</b>\n"
-        "• Type any question and I'll answer using xAI Grok.\n"
+        "• Type any question and I'll answer using OpenRouter AI.\n"
         "• Send any file (document, photo, audio, etc.) optionally with a caption "
         "describing what you want to know about it.\n\n"
         "<b>Supported file types for analysis:</b>\n"
@@ -144,15 +144,15 @@ async def handle_text_message(
     # Maintain per-user conversation history
     history: list[dict] = context.user_data.setdefault("history", [])
 
-    client: XAIClient = context.bot_data["xai_client"]
+    client: OpenRouterClient = context.bot_data["openrouter_client"]
     try:
         reply, history = await client.chat(user_text, history)
         context.user_data["history"] = history
         await send_long_message(update.message, reply)
     except Exception as exc:
-        logger.exception("Error calling xAI API: %s", exc)
+        logger.exception("Error calling OpenRouter API: %s", exc)
         await update.message.reply_text(
-            f"❌ Error communicating with Grok:\n<code>{exc}</code>",
+            f"❌ Error communicating with AI:\n<code>{exc}</code>",
             parse_mode="HTML",
         )
 
@@ -216,7 +216,7 @@ async def handle_file_message(
 
     # ---- Build the prompt ----
     history: list[dict] = context.user_data.setdefault("history", [])
-    client: XAIClient = context.bot_data["xai_client"]
+    client: OpenRouterClient = context.bot_data["openrouter_client"]
 
     try:
         reply, history = await client.chat_with_file(
@@ -229,7 +229,7 @@ async def handle_file_message(
         context.user_data["history"] = history
         await send_long_message(message, reply)
     except Exception as exc:
-        logger.exception("Error sending file to xAI: %s", exc)
+        logger.exception("Error sending file to OpenRouter: %s", exc)
         await message.reply_text(
             f"❌ Error analysing file:\n<code>{exc}</code>",
             parse_mode="HTML",
@@ -242,9 +242,9 @@ async def handle_file_message(
 
 async def main() -> None:
     """Entry point."""
-    xai_client = XAIClient(
-        api_key=XAI_API_KEY,
-        model=XAI_MODEL,
+    openrouter_client = OpenRouterClient(
+        api_key=OPENROUTER_API_KEY,
+        model=OPENROUTER_MODEL,
     )
 
     app = (
@@ -252,7 +252,7 @@ async def main() -> None:
         .token(TELEGRAM_BOT_TOKEN)
         .build()
     )
-    app.bot_data["xai_client"] = xai_client
+    app.bot_data["openrouter_client"] = openrouter_client
 
     # Commands
     app.add_handler(CommandHandler("start", start_command))
