@@ -17,9 +17,9 @@ SYSTEM_PROMPT = (
 
 PREFERRED_MODELS = [
     "grok-2-vision-1212",
+    "grok-2-1212",
     "grok-2-latest",
-    "grok-2",
-    "grok-1",
+    "grok-beta",
 ]
 
 VISION_MODELS = {
@@ -45,7 +45,7 @@ class XAIClient:
         """Pick the best available Grok model."""
         try:
             available = {m.id for m in self._client.models.list().data}
-            logger.info("Available xAI models: %s", available)
+            logger.info("Available xAI models: %s", sorted(available))
             for model in PREFERRED_MODELS:
                 if model in available:
                     logger.info("Selected xAI model: %s", model)
