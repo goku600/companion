@@ -54,6 +54,9 @@ class GeminiClient:
     def __init__(self, api_key: str, model: str = "gemini-1.5-flash") -> None:
         genai.configure(api_key=api_key)
         self._model_name = model
+        # Ensure model name has the correct prefix for the SDK
+        if not model.startswith("models/"):
+            model = f"models/{model}"
         self._model = genai.GenerativeModel(
             model_name=model,
             system_instruction=(
