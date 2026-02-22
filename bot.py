@@ -244,7 +244,7 @@ async def handle_file_message(
 # Main
 # ---------------------------------------------------------------------------
 
-def main() -> None:
+async def main() -> None:
     """Entry point."""
     rovo_client = RovoDevClient(
         email=ATLASSIAN_EMAIL,
@@ -277,8 +277,16 @@ def main() -> None:
     app.add_handler(MessageHandler(file_filter, handle_file_message))
 
     logger.info("Bot is running with polling…")
-    app.run_polling(drop_pending_updates=True)
+
+    # Use async context manager to avoid event loop conflicts on Python 3.14+
+    async with app:
+        await app.updater.start_polling(drop_pending_updates=True)
+        await app.start()
+        # Block forever until a stop signal is received
+        await asyncio.Event().wait()
+        await app.updater.stop()
+        await app.stop()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
