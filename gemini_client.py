@@ -48,13 +48,13 @@ DOCUMENT_MIME_TYPES = {
 }
 
 
-# Preferred models in priority order (best to fallback)
+# Preferred models in priority order — free-tier friendly first
 PREFERRED_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
     "gemini-1.5-flash",
     "gemini-1.5-flash-8b",
     "gemini-1.5-pro",
+    "gemini-2.0-flash-lite",
+    "gemini-2.0-flash",
     "gemini-pro",
 ]
 
