@@ -2,10 +2,12 @@ services:
   - type: worker
     name: rovo-telegram-bot
     runtime: python
-    pythonVersion: "3.11"
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
+    autoDeploy: true
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: TELEGRAM_BOT_TOKEN
         sync: false          # Set manually in Render dashboard
       - key: ATLASSIAN_EMAIL
@@ -16,4 +18,3 @@ services:
         sync: false
       - key: ALLOWED_TELEGRAM_USER_IDS
         sync: false          # Optional: comma-separated user IDs
-    autoDeploy: true
