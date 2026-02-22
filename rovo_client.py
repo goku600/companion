@@ -203,18 +203,12 @@ class RovoDevClient:
         # Determine base URL strategy
         base = self.site_url
 
-        # ---- Strategy 1: Atlassian Assist / Rovo gateway ----
-        # https://<your-site>.atlassian.net/gateway/api/assist/chat/v1/chat
-        if "atlassian.net" in base:
-            url = f"{base}/gateway/api/assist/chat/v1/chat"
-            payload = self._build_assist_payload(messages)
-        else:
-            # ---- Strategy 2: api.atlassian.com remote agent REST API ----
-            # https://api.atlassian.com/v1/agents/rovo-dev/conversations
-            url = f"{base}{self._AGENT_PATH}"
-            payload = self._build_remote_agent_payload(messages)
+        # ---- Atlassian Rovo Dev official REST API ----
+        # POST https://api.atlassian.com/rovo/v1/agents/rovo-dev/chat
+        url = "https://api.atlassian.com/rovo/v1/agents/rovo-dev/chat"
+        payload = self._build_assist_payload(messages)
 
-        logger.debug("POST %s  payload_keys=%s", url, list(payload.keys()))
+        logger.info("POST %s  payload_keys=%s", url, list(payload.keys()))
 
         response = await self._http.post(url, headers=self._headers, json=payload)
 
